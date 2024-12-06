@@ -7,9 +7,9 @@ import signal
 
 # Cấu hình server
 PORT = 65432
-FILE_LIST = 'PHAN I/files.txt'
+FILE_LIST = 'files.txt'
 FORMAT = 'utf8'
-SERVER_FILES = 'PHAN I/server_files'
+SERVER_FILES = 'server_files'
 CHUNK_SIZE = 1024 * 1024 
 lock = threading.Lock()
 stop_flag = True
