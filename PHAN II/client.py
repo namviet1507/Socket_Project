@@ -5,9 +5,10 @@ import json
 import threading
 import signal
 import struct
+import sys
 
 SERVER_PORT = 65432
-CHUNK_SIZE = 512 * 1024 
+CHUNK_SIZE = 1024 
 FORMAT = 'utf8'
 INPUT_FILE = 'PHAN II/input.txt'
 OUTPUT_FOLDER = 'PHAN II/downloads'
@@ -89,16 +90,15 @@ def download_file(server_host, filename):
                 try:
                     request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
                     client_socket.sendto(request, (server_host, SERVER_PORT))
-                    # while stop_flag:
                     packet, _ = client_socket.recvfrom(CHUNK_SIZE + 8)
                     sequence_number, checksum = struct.unpack("!II", packet[:8])
-                    chunk += packet[:8]
+                    chunk += packet[8:]
                     if checksum != calculate_checksum(chunk):
                         print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
                         continue
-                    ack = struct.pack("!I", sequence_number)
-                    client_socket.sendto(ack, server_host)
-                    print(f"Chunk {sequence_number} received successfully.")
+                    # ack = struct.pack("!I", sequence_number)
+                    # client_socket.sendto(ack, server_host)
+                    # print(f"Chunk {sequence_number} received successfully.")
 
                 except Exception as e:
                     print(f"Error receiving chunk: {e}")
@@ -141,6 +141,7 @@ def signal_handler(signum, frame):
     global stop_flag
     stop_flag = True
     print("\nClosing client...")
+    exit(0)
 
 def start_client():
     global stop_flag
