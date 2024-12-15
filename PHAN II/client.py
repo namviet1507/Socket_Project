@@ -5,10 +5,9 @@ import json
 import threading
 import signal
 import struct
-import sys
 
 SERVER_PORT = 65432
-CHUNK_SIZE = 1024 
+CHUNK_SIZE = 4* 1024 
 FORMAT = 'utf8'
 INPUT_FILE = 'PHAN II/input.txt'
 OUTPUT_FOLDER = 'PHAN II/downloads'
@@ -85,19 +84,20 @@ def download_file(server_host, filename):
             remaining = file_size - bytes_received
             chunk_size = min(CHUNK_SIZE, remaining)
 
+            request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
+            client_socket.sendto(request, (server_host, SERVER_PORT))
             chunk = b""
             while len(chunk) < chunk_size:
                 try:
-                    request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
-                    client_socket.sendto(request, (server_host, SERVER_PORT))
                     packet, _ = client_socket.recvfrom(CHUNK_SIZE + 8)
                     sequence_number, checksum = struct.unpack("!II", packet[:8])
-                    chunk += packet[8:]
                     if checksum != calculate_checksum(chunk):
-                        print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
+                        # print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
                         continue
-                    # ack = struct.pack("!I", sequence_number)
-                    # client_socket.sendto(ack, server_host)
+
+                    chunk = packet[8:]
+                    ack = struct.pack("!I", sequence_number)
+                    client_socket.sendto(ack, (server_host, SERVER_PORT))
                     # print(f"Chunk {sequence_number} received successfully.")
 
                 except Exception as e:
@@ -113,7 +113,6 @@ def download_file(server_host, filename):
             progress = int(bytes_received / file_size * 100)
             with lock:
                 download_status[filename] = progress
-            # time.sleep(0.1)
     with lock:
         download_status[filename] = 100
     print(f"Download completed: {filename}")
@@ -161,7 +160,7 @@ def start_client():
     
     input_thread = threading.Thread(target=check_input_file, args=(server_host,))
     input_thread.start()
-    
+
     progress_thread = threading.Thread(target=display_progress)
     progress_thread.start()
     
