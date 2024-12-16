@@ -11,7 +11,7 @@ TIMEOUT = 2  # 2 seconds
 FILE_LIST = 'files.txt'
 FORMAT = 'utf8'
 SERVER_FILES = 'server_files'
-CHUNK_SIZE = 1024 * 1024 
+CHUNK_SIZE = 64 * 1024 
 lock = threading.Lock()
 stop_flag = False
 
@@ -50,23 +50,23 @@ def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk
             file.seek(chunk_index)
             data = file.read(chunk_size)
         
-        sequence_number = chunk_index
-        checksum = calculate_checksum(data)
-        packet = struct.pack("!II", sequence_number, checksum) + data
-        while not stop_flag:
-            try:
-                server_socket.sendto(packet, client_address)
-                server_socket.settimeout(TIMEOUT)
-                ack, _ = server_socket.recvfrom(1024)
-                ack_number, = struct.unpack("!I", ack)
-                if ack_number == sequence_number:
-                    print(f"Chunk {sequence_number} acknowledged by client.")
-                    break
-                else:
-                    print(f"Invalid ACK received: {ack_number}. Expected: {sequence_number}.")
-            except socket.timeout:
-                print(f"Timeout! Resending chunk {sequence_number}.")
-                continue
+            sequence_number = chunk_index + chunk_size
+            checksum = calculate_checksum(data)
+            packet = struct.pack("!II", sequence_number, checksum) + data
+            while not stop_flag:
+                try:
+                    server_socket.sendto(packet, client_address)
+                    server_socket.settimeout(TIMEOUT)
+                    ack, _ = server_socket.recvfrom(1024)
+                    ack_number, = struct.unpack("!I", ack)
+                    if ack_number == sequence_number:
+                        print(f"Chunk {sequence_number} acknowledged by client.")
+                        break
+                    else:
+                        print(f"Invalid ACK received: {ack_number}. Expected: {sequence_number}.")
+                except socket.timeout:
+                    print(f"Timeout! Resending chunk {sequence_number}.")
+                    continue
         return len(data)
     except Exception as e:
         print(f"Error sending file chunk: {e}")
@@ -89,6 +89,10 @@ def handle_client(server_socket, address):
             file_name = file_name.decode(FORMAT).strip('\x00')
             start_index = int(start_index)
             chunk_size = min(int(chunk_size), CHUNK_SIZE)
+            
+            if file_name not in files:
+                server_socket.sendto(b"Invalid file", client_address)
+                continue
 
             file_path = os.path.join(SERVER_FILES, file_name)
             if not os.path.exists(file_path):
@@ -100,7 +104,7 @@ def handle_client(server_socket, address):
             bytes_sent = send_file_chunk(server_socket, client_address, file_path, start_index, chunk_size)
 
             print(f"Sending {file_name}")
-            total_size = os.path.getsize(file_path)
+            total_size = os.path.getsize(os.path.join(SERVER_FILES, file_name))
 
             with lock:
                 if bytes_sent > 0:
@@ -118,6 +122,7 @@ def handle_client(server_socket, address):
             print(f"Error handling request from {address}: {e}")
             break
     print(f"Client disconnected")
+    server_socket.close()
 
 def signal_handler(sig, frame):
     global stop_flag
@@ -150,7 +155,7 @@ def start_server():
         while not stop_flag:
             try:
                 request, client_address = server_socket.recvfrom(1024)
-                print(f"Received {request} from {client_address}")
+                # print(f"Received {request.decode(FORMAT)} from {client_address}")
                 client_thread = threading.Thread(target=handle_client, args=(server_socket, client_address))
                 client_thread.start()
 

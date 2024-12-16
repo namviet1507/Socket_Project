@@ -7,7 +7,7 @@ import signal
 import struct
 
 SERVER_PORT = 65432
-CHUNK_SIZE = 1024 * 1024 
+CHUNK_SIZE = 64 * 1024 
 TIMEOUT = 2
 FORMAT = 'utf8'
 INPUT_FILE = 'UDP/input.txt'
@@ -41,7 +41,7 @@ def connect_to_server(server_host):
 
 def get_file_list(client_socket, server_host):
     try:
-        client_socket.sendto(b"LIST", (server_host, SERVER_PORT))
+        # client_socket.sendto(b"LIST", (server_host, SERVER_PORT))
         data, _ = client_socket.recvfrom(4096)
         global files
         files = json.loads(data.decode(FORMAT))
@@ -85,13 +85,20 @@ def download_file(server_host, filename):
             remaining = file_size - bytes_received
             chunk_size = min(CHUNK_SIZE, remaining)
 
+            try:
+                request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
+                client_socket.sendto(request, (server_host, SERVER_PORT))
+            except socket.error as e:
+                print(f"Error sending request to server: {e}")
+                break
+
             chunk = b""
             while len(chunk) < chunk_size:
                 try:
-                    request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
-                    client_socket.sendto(request, (server_host, SERVER_PORT))
-                    client_socket.settimeout(TIMEOUT)
-                    packet, _ = client_socket.recvfrom(CHUNK_SIZE + 8)
+                    # request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
+                    # client_socket.sendto(request, (server_host, SERVER_PORT))
+                    # client_socket.settimeout(TIMEOUT)
+                    packet, _ = client_socket.recvfrom(1024)
                     if len(packet) < 8:
                         print(f"Error: Received packet too short.")
                         break
@@ -99,9 +106,9 @@ def download_file(server_host, filename):
                     sequence_number, checksum = struct.unpack("!II", packet[:8])
                     chunk_data = packet[8:]
                     chunk += chunk_data
-                    if checksum != calculate_checksum(chunk_data):
-                        print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
-                        continue
+                    # if checksum != calculate_checksum(chunk_data):
+                    #     print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
+                    #     continue
                     ack = struct.pack("!I", sequence_number)
                     client_socket.sendto(ack, (server_host, SERVER_PORT))
                     print(f"Chunk {sequence_number} received successfully.")
