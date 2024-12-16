@@ -5,15 +5,14 @@ import json
 import threading
 import signal
 import struct
-import sys
 
 # Cấu hình server
 PORT = 65432
-TIMEOUT = 2  # 2 seconds
+TIMEOUT = 1  # 2 seconds
 FILE_LIST = 'files.txt'
 FORMAT = 'utf8'
 SERVER_FILES = 'server_files'
-CHUNK_SIZE = 1024 
+CHUNK_SIZE = 4 * 1024 
 lock = threading.Lock()
 stop_flag = False
 
@@ -45,17 +44,23 @@ def calculate_checksum(data):
     return sum(data) % 2**32
 
 def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk_size):
+<<<<<<< HEAD:UDP/server.py
     print(f"Client requested chunk starting at {chunk_index} for {file_path}")
+=======
+>>>>>>> b28bc6a7f5a7c6de621d6f31202f575cf05c1f74:PHAN II/server.py
     global stop_flag
     try:
         with open(file_path, 'rb') as file:
             file.seek(chunk_index)
             data = file.read(chunk_size)
-        try:
-            sequence_number = chunk_index
-            checksum = calculate_checksum(data)
-            packet = struct.pack("!II", sequence_number, checksum) + data
+        sequence_number = chunk_index
+        checksum = calculate_checksum(data)
+        packet = struct.pack("!II", sequence_number, checksum) + data
+        while not stop_flag:
+            try:
+                server_socket.sendto(packet, client_address)
 
+<<<<<<< HEAD:UDP/server.py
             server_socket.sendto(packet, client_address)
             server_socket.settimeout(TIMEOUT)
             ack, _ = server_socket.recvfrom(4)
@@ -64,6 +69,16 @@ def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk
                 print(f"Chunk {sequence_number} acknowledged by client.")
         except socket.timeout:
             print(f"Timeout! Resending chunk {sequence_number}.")
+=======
+                server_socket.settimeout(TIMEOUT)
+                ack, _ = server_socket.recvfrom(4)
+                ack_number, = struct.unpack("!I", ack)
+                if ack_number == sequence_number:
+                    print(f"Chunk {sequence_number} acknowledged by client.")
+                    break
+            except socket.timeout:
+                print(f"Timeout! Resending chunk {sequence_number}.")
+>>>>>>> b28bc6a7f5a7c6de621d6f31202f575cf05c1f74:PHAN II/server.py
     except Exception as e:
         print(f"Error sending file chunk: {e}")
         server_socket.sendto(f"Error: {str(e)}".encode(FORMAT), client_address)
@@ -159,6 +174,7 @@ def start_server():
     _, client_address = server_socket.recvfrom(1024)
     print(f"CONNECTED BY CLIENT ON {client_address}")
     send_file_list(server_socket, client_address)
+    # server_socket.settimeout(60)
 
     while not stop_flag:
         try:
@@ -175,9 +191,8 @@ def start_server():
             if not os.path.exists(file_path):
                 print(f"File not found: {file_name}")
                 server_socket.sendto(b"ERROR: File not found", client_address)
-
+            print(f"Client requested chunk starting at {chunk_index} for {file_path}")
             send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk_size)
-
         except socket.timeout:
             continue
         except Exception as e:
