@@ -44,10 +44,7 @@ def calculate_checksum(data):
     return sum(data) % 2**32
 
 def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk_size):
-<<<<<<< HEAD:UDP/server.py
     print(f"Client requested chunk starting at {chunk_index} for {file_path}")
-=======
->>>>>>> b28bc6a7f5a7c6de621d6f31202f575cf05c1f74:PHAN II/server.py
     global stop_flag
     try:
         with open(file_path, 'rb') as file:
@@ -60,7 +57,6 @@ def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk
             try:
                 server_socket.sendto(packet, client_address)
 
-<<<<<<< HEAD:UDP/server.py
             server_socket.sendto(packet, client_address)
             server_socket.settimeout(TIMEOUT)
             ack, _ = server_socket.recvfrom(4)
@@ -69,16 +65,6 @@ def send_file_chunk(server_socket, client_address, file_path, chunk_index, chunk
                 print(f"Chunk {sequence_number} acknowledged by client.")
         except socket.timeout:
             print(f"Timeout! Resending chunk {sequence_number}.")
-=======
-                server_socket.settimeout(TIMEOUT)
-                ack, _ = server_socket.recvfrom(4)
-                ack_number, = struct.unpack("!I", ack)
-                if ack_number == sequence_number:
-                    print(f"Chunk {sequence_number} acknowledged by client.")
-                    break
-            except socket.timeout:
-                print(f"Timeout! Resending chunk {sequence_number}.")
->>>>>>> b28bc6a7f5a7c6de621d6f31202f575cf05c1f74:PHAN II/server.py
     except Exception as e:
         print(f"Error sending file chunk: {e}")
         server_socket.sendto(f"Error: {str(e)}".encode(FORMAT), client_address)
