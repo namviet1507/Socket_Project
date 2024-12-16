@@ -7,10 +7,11 @@ import signal
 import struct
 
 SERVER_PORT = 65432
-CHUNK_SIZE = 4* 1024 
+CHUNK_SIZE = 1024 * 1024 
+TIMEOUT = 2
 FORMAT = 'utf8'
-INPUT_FILE = 'PHAN II/input.txt'
-OUTPUT_FOLDER = 'PHAN II/downloads'
+INPUT_FILE = 'UDP/input.txt'
+OUTPUT_FOLDER = 'UDP/downloads'
 
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -27,8 +28,8 @@ def connect_to_server(server_host):
     for attempt in range(max_retries):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # client_socket.connect((server_host, SERVER_PORT))
             print(f"Connected to server at {server_host}:{SERVER_PORT}")
+            client_socket.sendto(b"LIST", (server_host, SERVER_PORT))
             return client_socket
         except Exception as e:
             print(f"Attempt {attempt + 1}/{max_retries}: Error connecting to server: {e}")
@@ -84,21 +85,26 @@ def download_file(server_host, filename):
             remaining = file_size - bytes_received
             chunk_size = min(CHUNK_SIZE, remaining)
 
-            request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
-            client_socket.sendto(request, (server_host, SERVER_PORT))
             chunk = b""
             while len(chunk) < chunk_size:
                 try:
+                    request = struct.pack("!256sII", filename.encode(FORMAT), bytes_received, chunk_size)
+                    client_socket.sendto(request, (server_host, SERVER_PORT))
+                    client_socket.settimeout(TIMEOUT)
                     packet, _ = client_socket.recvfrom(CHUNK_SIZE + 8)
-                    sequence_number, checksum = struct.unpack("!II", packet[:8])
-                    if checksum != calculate_checksum(chunk):
-                        # print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
-                        continue
+                    if len(packet) < 8:
+                        print(f"Error: Received packet too short.")
+                        break
 
-                    chunk = packet[8:]
+                    sequence_number, checksum = struct.unpack("!II", packet[:8])
+                    chunk_data = packet[8:]
+                    chunk += chunk_data
+                    if checksum != calculate_checksum(chunk_data):
+                        print(f"Checksum mismatch for chunk {sequence_number}. Retrying...")
+                        continue
                     ack = struct.pack("!I", sequence_number)
                     client_socket.sendto(ack, (server_host, SERVER_PORT))
-                    # print(f"Chunk {sequence_number} received successfully.")
+                    print(f"Chunk {sequence_number} received successfully.")
 
                 except Exception as e:
                     print(f"Error receiving chunk: {e}")
@@ -120,7 +126,7 @@ def download_file(server_host, filename):
 
 def display_progress():
     while not stop_flag:
-        os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
         print("Available file: ")
         print("__________________")
         for filename, size in files.items():
@@ -154,13 +160,13 @@ def start_client():
     if not initial_client_socket:
         print("Failed to connect to server. Exiting...")
         return
-
+    
     get_file_list(initial_client_socket, server_host)
     initial_client_socket.close()
     
     input_thread = threading.Thread(target=check_input_file, args=(server_host,))
     input_thread.start()
-
+    
     progress_thread = threading.Thread(target=display_progress)
     progress_thread.start()
     

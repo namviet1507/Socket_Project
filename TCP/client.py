@@ -6,7 +6,7 @@ import threading
 import signal
 
 SERVER_PORT = 65432
-CHUNK_SIZE = 512 * 1024 
+CHUNK_SIZE = 1024 * 1024 
 FORMAT = 'utf8'
 INPUT_FILE = 'TCP/input.txt'
 OUTPUT_FOLDER = 'TCP/downloads'
