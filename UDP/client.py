@@ -12,6 +12,7 @@ OUTPUT_FOLDER = 'UDP/downloads'
 INPUT_FILE = 'UDP/input.txt'
 FILE_LIST = 'files.txt'
 TIMEOUT = 2
+last_display_time = 0
 
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -65,12 +66,12 @@ def check_input_file(server_host):
                         filename = filename.strip()
                         if filename not in download_status:
                             download_status[filename] = 0
-                            download_file(client_socket, server_host, filename)
+                            download_file(server_host, filename)
         except FileNotFoundError:
             pass
         time.sleep(1)
 
-def download_file(client_socket, server_ip, filename):
+def download_file(server_ip, filename):
     client_socket.sendto(b'LIST', (server_ip, SERVER_PORT))
     bytes_received = 0
     chunk_index = 0
@@ -98,7 +99,12 @@ def download_file(client_socket, server_ip, filename):
 
                     progress = int(bytes_received / file_size * 100)
                     download_status[filename] = progress
-                    display_progress()
+
+                    global last_display_time
+                    current_time = time.time()
+                    if current_time - last_display_time >= 0.05:
+                        last_display_time = current_time
+                        display_progress()
 
                 ack = struct.pack("!I", sequence_number)
                 client_socket.sendto(ack, (server_ip, SERVER_PORT))
@@ -106,12 +112,11 @@ def download_file(client_socket, server_ip, filename):
                 if len(data) < CHUNK_SIZE:
                     print(f"Download {filename} complete!")
                     download_status[filename] = 100
-                    # display_progress()
+                    display_progress()
                     break
             except Exception as e:
                 print(f"Error downloading file: {e}")
                 break
-    # client_socket.close()
 
 def signal_handler(signum, frame):
     global stop_flag

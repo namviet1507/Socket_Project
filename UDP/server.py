@@ -101,7 +101,7 @@ def start_server():
     
     while not stop_flag:
         try:
-            server_socket.settimeout(10)
+            # server_socket.settimeout(10)
             request, client_address = server_socket.recvfrom(1024)
             header = request[:4].decode(FORMAT)
             if header == 'LIST':
