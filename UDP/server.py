@@ -93,9 +93,6 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 def start_server():
-    # server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # SERVER_HOST = socket.gethostname()
-    # SERVER_IP = socket.gethostbyname(SERVER_HOST) or '127.0.0.1'
     SERVER_IP = get_wireless_ip() or '127.0.0.1'
     
     signal.signal(signal.SIGINT, signal_handler)
@@ -103,7 +100,6 @@ def start_server():
 
     load_file_list()
 
-    # print(f"Server hostname: {SERVER_HOST}")
     print(f"Server IP address: {SERVER_IP}")
     print(f"Server port: {PORT}")
 

@@ -139,7 +139,6 @@ def combine_file_parts(filename, num_chunks):
             part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
             with open(part_file_path, "rb") as part_file:
                 file.write(part_file.read())
-            # part_file.close()
             try:
                 os.remove(part_file_path)
             except PermissionError as e:
