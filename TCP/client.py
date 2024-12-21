@@ -134,21 +134,19 @@ def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
 combine_lock = threading.Lock()
 
 def combine_file_parts(filename, num_chunks):
-    with combine_lock:
-        with open(os.path.join(OUTPUT_FOLDER, filename), "wb") as file:
-            for i in range(num_chunks):
-                part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
-                with open(part_file_path, "rb") as part_file:
-                    file.write(part_file.read())
-                time.sleep(0.1)
-                part_file.close()
-                try:
-                    os.remove(part_file_path)
-                except PermissionError as e:
-                    print(f"Could not remove {part_file_path}: {e}")
-        with lock:
-            download_status[filename] = 100
-        # print(f"File {filename} has been successfully downloaded and combined.")
+    with open(os.path.join(OUTPUT_FOLDER, filename), "wb") as file:
+        for i in range(num_chunks):
+            part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
+            with open(part_file_path, "rb") as part_file:
+                file.write(part_file.read())
+            # part_file.close()
+            try:
+                os.remove(part_file_path)
+            except PermissionError as e:
+                print(f"Could not remove {part_file_path}: {e}")
+    with lock:
+        download_status[filename] = 100
+    # print(f"File {filename} has been successfully downloaded and combined.")
 
 
 def display_progress():

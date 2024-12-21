@@ -10,7 +10,7 @@ import psutil
 PORT = 65432
 SERVER_FILES = 'server_files'
 CHUNK_SIZE = 60 * 1024
-TIMEOUT = 2
+TIMEOUT = 5
 FORMAT = 'utf-8'
 FILE_LIST = 'files.txt'
 lock = threading.Lock()
@@ -141,7 +141,7 @@ def start_server():
                             break
                     except Exception as e:
                         print(f"Error handling client {client_address}: {e}")
-                        break
+                        # break
         except Exception as e:
             print(f"Server error: {e}")
 

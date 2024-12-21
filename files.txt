@@ -6,3 +6,13 @@ File5.zip 100MB
 File6.zip 200MB
 File7.zip 512MB
 File8.zip 1GB
+Docker_Desktop_Installer.zip 522MB
+dotnet20.zip 24MB
+dotnetfx35.exe 231MB
+FreeNAS-11.0-RELEASE.iso 549MB
+LibreOffice_5.2.0_Win_x86.msi 211MB
+MobaXterm_Installer_v21.2.zip 25MB
+modeler_ae_175A_PL7_13311_win.exe 585MB
+sintel-2048-surround.mp4 296MB
+text_file.txt 6MB
+TrueNAS-13.0-RELEASE.iso 989MB

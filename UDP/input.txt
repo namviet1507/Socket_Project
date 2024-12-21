@@ -1,2 +1,10 @@
-File1.zip
-File2.zip
+Docker_Desktop_Installer.zip
+dotnet20.zip
+dotnetfx35.exe
+FreeNAS-11.0-RELEASE.iso
+LibreOffice_5.2.0_Win_x86.msi
+MobaXterm_Installer_v21.2.zip
+modeler_ae_175A_PL7_13311_win.exe
+sintel-2048-surround.mp4
+text_file.txt
+TrueNAS-13.0-RELEASE.iso

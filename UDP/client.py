@@ -86,6 +86,9 @@ def download_file(server_ip, filename):
 
             try:
                 packet, _ = client_socket.recvfrom(CHUNK_SIZE + 8)
+                if len(packet) < 8:
+                    print("Received incomplete packet. Retrying...")
+                    continue
                 sequence_number, checksum = struct.unpack("!II", packet[:8])
                 data = packet[8:]
                 
@@ -104,7 +107,7 @@ def download_file(server_ip, filename):
 
                     global last_display_time
                     current_time = time.time()
-                    if current_time - last_display_time >= 0.5:
+                    if current_time - last_display_time >= 0.8:
                         last_display_time = current_time
                         display_progress()
 
