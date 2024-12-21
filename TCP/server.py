@@ -1,9 +1,9 @@
 import socket
-import time
 import os
 import json
 import threading
 import signal
+import psutil
 
 # Cấu hình server
 PORT = 65432
@@ -17,6 +17,16 @@ stop_flag = True
 os.makedirs(SERVER_FILES, exist_ok=True)
 
 files = {}
+
+def get_wireless_ip():
+    wireless_ip = None
+    for interface, addrs in psutil.net_if_addrs().items():
+        if "Wi-Fi" in interface or "Wireless" in interface or "wlan" in interface:
+            for addr in addrs:
+                if addr.family == socket.AF_INET:  # IPv4
+                    wireless_ip = addr.address
+                    break
+    return wireless_ip
     
 def load_file_list():
     global files
@@ -108,12 +118,13 @@ def signal_handler(sig, frame):
 
 def start_server():
     global stop_flag
-    SERVER_HOST = socket.gethostname()
+    # SERVER_HOST = socket.gethostname()
     # SERVER_IP = socket.gethostbyname(SERVER_HOST)
-    try:
-        SERVER_IP = socket.gethostbyname(SERVER_HOST)
-    except socket.gaierror:
-        SERVER_IP = '127.0.0.1'
+    SERVER_IP = get_wireless_ip() or '127.0.0.1'
+    # try:
+    #     SERVER_IP = socket.gethostbyname(SERVER_HOST)
+    # except socket.gaierror:
+    #     SERVER_IP = '127.0.0.1'
 
     
     signal.signal(signal.SIGINT, signal_handler)
@@ -121,7 +132,7 @@ def start_server():
         
     load_file_list()
 
-    print(f"Server hostname: {SERVER_HOST}")
+    # print(f"Server hostname: {SERVER_HOST}")
     print(f"Server IP address: {SERVER_IP}")
     print(f"Server port: {PORT}")
 
@@ -129,7 +140,7 @@ def start_server():
         server_socket.settimeout(1)
         server_socket.bind((SERVER_IP, PORT))
         server_socket.listen()
-        print(f"Server {SERVER_HOST} is ready for connecting on {SERVER_IP}:{PORT}")
+        print(f"Server is ready for connecting on {SERVER_IP}:{PORT}")
 
         while stop_flag:
             try:
