@@ -19,7 +19,7 @@ stop_flag = False
 lock = threading.Lock()
 
 def connect_to_server(server_host):
-    max_retries = 4
+    max_retries = 3
     for attempt in range(max_retries):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -66,19 +66,33 @@ def check_input_file(server_host):
         time.sleep(1)
 
 def download_file(server_host, filename):
+    file_size = os.path.getsize(os.path.join('server_files', filename))
+    num_chunks = 4
+    chunk_size = file_size // num_chunks
+    threads = []
+
+    for i in range(num_chunks):
+        start_byte = i * chunk_size
+        end_byte = (i + 1) * chunk_size if i < num_chunks - 1 else file_size
+        thread = threading.Thread(target=download_chunk, args=(server_host, filename, start_byte, end_byte, i))
+        threads.append(thread)
+        thread.start()
+    
+    for thread in threads:
+        thread.join()
+
+def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
     client_socket = connect_to_server(server_host)
     if not client_socket:
         print(f"Failed to connect to server for downloading {filename}")
         return
-    
-    file_size = int(files[filename])
-    
-    with open(os.path.join(OUTPUT_FOLDER, filename), "wb") as file:
-        bytes_received = 0
-        while bytes_received < file_size and not stop_flag:
-            remaining = file_size - bytes_received
+
+    with open(os.path.join(OUTPUT_FOLDER, f"{filename}_part_{chunk_index}"), "wb") as file:
+        bytes_received = start_byte
+        while bytes_received < end_byte and not stop_flag:
+            remaining = end_byte - bytes_received
             chunk_size = min(CHUNK_SIZE, remaining)
-            request = f"{filename}  {bytes_received} {chunk_size}"
+            request = f"{filename} {bytes_received} {chunk_size}"
             try:
                 client_socket.sendall(request.encode(FORMAT))
             except socket.error as e:
@@ -104,14 +118,30 @@ def download_file(server_host, filename):
             file.write(chunk)
             bytes_received += len(chunk)
             
+            file_size = int(files[filename])
             progress = int(bytes_received / file_size * 100)
             with lock:
                 download_status[filename] = progress
-            # time.sleep(0.1)
+    
+    print(f"Downloaded part {chunk_index} of {filename}")
+    if chunk_index == 3:
+        combine_file_parts(filename, 4)
+
+    request = f"{'DISCONNECT'} {0} {0}"
+    client_socket.sendall(request.encode(FORMAT))
+    client_socket.close()
+
+def combine_file_parts(filename, num_chunks):
+    with open(os.path.join(OUTPUT_FOLDER, filename), "wb") as file:
+        for i in range(num_chunks):
+            part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
+            with open(part_file_path, "rb") as part_file:
+                file.write(part_file.read())
+            os.remove(part_file_path)
     with lock:
         download_status[filename] = 100
-    print(f"Download completed: {filename}")
-    client_socket.close()
+    # print(f"File {filename} has been successfully downloaded and combined.")
+
 
 def display_progress():
     while not stop_flag:

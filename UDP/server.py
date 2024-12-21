@@ -5,13 +5,12 @@ import threading
 import signal
 import sys
 import json
-import time
 import psutil
 
 PORT = 65432
 SERVER_FILES = 'server_files'
 CHUNK_SIZE = 60 * 1024
-TIMEOUT = 2 
+TIMEOUT = 2
 FORMAT = 'utf-8'
 FILE_LIST = 'files.txt'
 lock = threading.Lock()
@@ -57,13 +56,16 @@ def calculate_checksum(data):
 
 def send_file_chunk(server_socket, client_address, filename, chunk_index):
     file_path = os.path.join(SERVER_FILES, filename)
+    file_size = os.path.getsize(os.path.join(file_path))
+    bytes_sent = 0
     try:
         with open(file_path, 'rb') as file:
             file.seek(chunk_index)
-            data = file.read(CHUNK_SIZE)
+            data = file.read(min(CHUNK_SIZE, file_size - bytes_sent))
             sequence_number = chunk_index // CHUNK_SIZE
             checksum = calculate_checksum(data)
             packet = struct.pack("!II", sequence_number, checksum) + data
+            bytes_sent += CHUNK_SIZE
             while not stop_flag:
                 server_socket.sendto(packet, client_address)
                 # print(f"Sent chunk {sequence_number} to {client_address}")
@@ -110,7 +112,6 @@ def start_server():
     
     while not stop_flag:
         try:
-            # server_socket.settimeout(10)
             request, client_address = server_socket.recvfrom(1024)
             header = request[:4].decode(FORMAT)
             if header == 'LIST':
@@ -132,12 +133,12 @@ def start_server():
                             percentage = min((chunk_index) / int(files[filename]) * 100, 100)
                             print(f"Sent {filename} ... {percentage:.1f}%", end = '\r')
 
-                        if chunk_index + CHUNK_SIZE >= files[filename]:
+                        file_size = os.path.getsize(os.path.join(SERVER_FILES, filename))
+                        if chunk_index + CHUNK_SIZE >= file_size:
                             print(f"Sent {filename} ... 100 %", end = '\r')
                             print(f"\nFile sent: {filename}")
                             print("_______________________________")
                             break
-                        # time.sleep(0.05)
                     except Exception as e:
                         print(f"Error handling client {client_address}: {e}")
                         break

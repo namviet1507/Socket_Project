@@ -76,7 +76,9 @@ def download_file(server_ip, filename):
     bytes_received = 0
     chunk_index = 0
 
-    file_size = int(files[filename])
+    file_path = os.path.join('server_files', filename)
+    file_size = os.path.getsize(os.path.join(file_path))
+    # file_size = int(files[filename])
     with open(os.path.join(OUTPUT_FOLDER, filename), 'wb') as file:
         while not stop_flag:
             request = b'REQF' + struct.pack("!256sI", filename.encode(FORMAT), bytes_received)
@@ -102,7 +104,7 @@ def download_file(server_ip, filename):
 
                     global last_display_time
                     current_time = time.time()
-                    if current_time - last_display_time >= 0.05:
+                    if current_time - last_display_time >= 0.5:
                         last_display_time = current_time
                         display_progress()
 

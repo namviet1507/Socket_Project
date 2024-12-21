@@ -54,11 +54,17 @@ def send_file_chunk(client_socket, filename, chunk_index, chunk_size):
         with open(file_path, 'rb') as file:
             file.seek(chunk_index)
             data = file.read(chunk_size)
+            if not data:
+                return 0
             client_socket.sendall(data)
         return len(data)
     except FileNotFoundError:
         print(f"File not found: {filename}")
         client_socket.sendall(b"File not found")
+        return 0
+    except socket.error as e:
+        print(f"Socket error while sending file: {e}")
+        client_socket.sendall(f"Error: {str(e)}".encode(FORMAT))
         return 0
     except Exception as e:
         print(f"Error sending file chunk: {e}")
@@ -69,7 +75,7 @@ def handle_client(client_socket, address):
     global stop_flag
     print(f"CONNECTED BY CLIENT ON {address}")
     send_file_list(client_socket)
-    client_socket.settimeout(60)  # Timeout 60 giây
+    client_socket.settimeout(60)
     while stop_flag:
         try:
             request = client_socket.recv(1024).decode(FORMAT)
@@ -85,6 +91,8 @@ def handle_client(client_socket, address):
             chunk_index = int(chunk_index)
             chunk_size = min(int(chunk_size), CHUNK_SIZE)
 
+            if file_name == 'DISCONNECT':
+                break
             if file_name not in files:
                 client_socket.sendall(b"Invalid file")
                 continue
@@ -107,6 +115,7 @@ def handle_client(client_socket, address):
         except Exception as e:
             print(f"Error handling request from {address}: {e}")
             break
+
     print(f"Client disconnected")
     client_socket.close()
 
@@ -118,21 +127,13 @@ def signal_handler(sig, frame):
 
 def start_server():
     global stop_flag
-    # SERVER_HOST = socket.gethostname()
-    # SERVER_IP = socket.gethostbyname(SERVER_HOST)
     SERVER_IP = get_wireless_ip() or '127.0.0.1'
-    # try:
-    #     SERVER_IP = socket.gethostbyname(SERVER_HOST)
-    # except socket.gaierror:
-    #     SERVER_IP = '127.0.0.1'
 
-    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
         
     load_file_list()
 
-    # print(f"Server hostname: {SERVER_HOST}")
     print(f"Server IP address: {SERVER_IP}")
     print(f"Server port: {PORT}")
 
