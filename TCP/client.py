@@ -81,6 +81,8 @@ def download_file(server_host, filename):
     for thread in threads:
         thread.join()
 
+    combine_file_parts(filename, num_chunks)
+
 def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
     client_socket = connect_to_server(server_host)
     if not client_socket:
@@ -124,8 +126,8 @@ def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
                 download_status[filename] = progress
     
     print(f"Downloaded part {chunk_index} of {filename}")
-    if chunk_index == 3:
-        combine_file_parts(filename, 4)
+    # if chunk_index == 3:
+    #     combine_file_parts(filename, 4)
 
     request = f"{'DISCONNECT'} {0} {0}"
     client_socket.sendall(request.encode(FORMAT))
@@ -134,6 +136,16 @@ def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
 combine_lock = threading.Lock()
 
 def combine_file_parts(filename, num_chunks):
+    missing_parts = []
+    for i in range(num_chunks):
+        part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
+        if not os.path.exists(part_file_path):
+            missing_parts.append(i)
+    
+    if missing_parts:
+        print(f"Error: Missing parts for {filename}: {missing_parts}")
+        return
+
     with open(os.path.join(OUTPUT_FOLDER, filename), "wb") as file:
         for i in range(num_chunks):
             part_file_path = os.path.join(OUTPUT_FOLDER, f"{filename}_part_{i}")
@@ -145,7 +157,7 @@ def combine_file_parts(filename, num_chunks):
                 print(f"Could not remove {part_file_path}: {e}")
     with lock:
         download_status[filename] = 100
-    # print(f"File {filename} has been successfully downloaded and combined.")
+    print(f"File {filename} has been successfully downloaded and combined.")
 
 
 def display_progress():
