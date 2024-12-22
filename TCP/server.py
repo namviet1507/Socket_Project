@@ -74,7 +74,7 @@ def send_file_chunk(client_socket, filename, chunk_index, chunk_size):
 def handle_client(client_socket, address):
     global stop_flag
     print(f"CONNECTED BY CLIENT ON {address}")
-    send_file_list(client_socket)
+    # send_file_list(client_socket)
     client_socket.settimeout(60)
     while stop_flag:
         try:
@@ -142,10 +142,14 @@ def start_server():
         server_socket.bind((SERVER_IP, PORT))
         server_socket.listen()
         print(f"Server is ready for connecting on {SERVER_IP}:{PORT}")
-
+        # send_file_list(server_socket)
+        sentFileList = True
         while stop_flag:
             try:
                 client_socket, addr = server_socket.accept()
+                if sentFileList:
+                    send_file_list(client_socket)
+                    sentFileList = False
                 client_thread = threading.Thread(target=handle_client, args=(client_socket, addr))
                 client_thread.start()
             except socket.timeout:

@@ -73,7 +73,7 @@ def download_file(server_host, filename):
 
     for i in range(num_chunks):
         start_byte = i * chunk_size
-        end_byte = (i + 1) * chunk_size if i < num_chunks - 1 else file_size
+        end_byte = ((i + 1) * chunk_size) if i < num_chunks - 1 else file_size
         thread = threading.Thread(target=download_chunk, args=(server_host, filename, start_byte, end_byte, i))
         threads.append(thread)
         thread.start()
@@ -88,7 +88,6 @@ def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
     if not client_socket:
         print(f"Failed to connect to server for downloading {filename}")
         return
-
     with open(os.path.join(OUTPUT_FOLDER, f"{filename}_part_{chunk_index}"), "wb") as file:
         bytes_received = start_byte
         while bytes_received < end_byte and not stop_flag:
@@ -126,14 +125,10 @@ def download_chunk(server_host, filename, start_byte, end_byte, chunk_index):
                 download_status[filename] = progress
     
     print(f"Downloaded part {chunk_index} of {filename}")
-    # if chunk_index == 3:
-    #     combine_file_parts(filename, 4)
 
     request = f"{'DISCONNECT'} {0} {0}"
     client_socket.sendall(request.encode(FORMAT))
     client_socket.close()
-
-combine_lock = threading.Lock()
 
 def combine_file_parts(filename, num_chunks):
     missing_parts = []
